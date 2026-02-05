@@ -1,0 +1,96 @@
+name: builder
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CMD: 'goxisbuilder -appdir ./eva -ignore ".git frontend build"'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - { name: "armv7hf",  args: '-sdk "1.15" -ubunutu "22.04" -manifest "manifest.json" -tags "prod" -arch armv7hf' }
+          - { name: "aarch64",  args: '-sdk "1.15" -ubunutu "22.04" -manifest "manifest.json" -tags "prod" -arch aarch64' }
+
+    env:
+      FILE_PREFIX: Eva_${{ github.ref_name }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24.12.0'
+
+      - name: Build Frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+          rm -rf node_modules
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.25'
+
+      - uses: docker/setup-buildx-action@v2
+
+      - run: go install github.com/Cacsjep/goxisbuilder@v1.3.0
+
+      - run: mkdir out
+
+      - name: Build firmware
+        run: |
+          ${{ env.CMD }} ${{ matrix.target.args }}
+          mv build/* out/${{ env.FILE_PREFIX }}_${{ matrix.target.name }}.eap
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target.name }}
+          path: out/*.eap
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+    env:
+      FILE_PREFIX: Eva_${{ github.ref_name }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: downloads
+
+      - name: Zip all artifacts
+        run: zip -jr eap.zip downloads/
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "${{ github.ref_name }}"
+          release_name: "${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "./eap.zip"
+          asset_name: "${{ github.ref_name }}.zip"
+          asset_content_type: "application/zip"

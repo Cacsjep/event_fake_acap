@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starting, please wait...</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #FFC107;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+        .status {
+            margin-top: 6px;
+            font-size: 13px;
+            color: #9e9e9e;
+        }
+        .progress {
+            width: 260px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #FFC107;
+            transition: width 200ms ease;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <p>EVA Event Simulator is starting...</p>
+        <div class="status" id="status-text">Starting...</div>
+        <div class="progress">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const targetUrl = `http://${window.location.hostname}:8746/`;
+            const checkInterval = 500;
+            const maxTime = 20000;
+            let elapsedTime = 0;
+            const statusText = document.getElementById("status-text");
+            const progressBar = document.getElementById("progress-bar");
+
+            function checkAppReady() {
+                return fetch(`${targetUrl}simulation/status`, { method: 'GET', cache: 'no-store' })
+                    .then((resp) => resp.json())
+                    .catch(() => null);
+            }
+
+            function attemptRedirect() {
+                if (elapsedTime >= maxTime) {
+                    document.querySelector(".loading-container p").textContent = "Startup is taking longer than expected. Retrying...";
+                    document.querySelector(".loading-container p").style.color = "#FFC107";
+                    elapsedTime = 0;
+                }
+
+                progressBar.style.width = `${Math.min((elapsedTime / maxTime) * 100, 100)}%`;
+
+                checkAppReady().then((data) => {
+                    if (data) {
+                        statusText.textContent = "Ready! Redirecting...";
+                        progressBar.style.width = "100%";
+                        window.location.href = targetUrl;
+                        return;
+                    }
+                    statusText.textContent = "Waiting for EVA to start...";
+                    elapsedTime += checkInterval;
+                    setTimeout(attemptRedirect, checkInterval);
+                });
+            }
+            attemptRedirect();
+        };
+    </script>
+
+</body>
+</html>
