@@ -1,5 +1,7 @@
 # Eva - Event Virtualizer for ACAP
 
+![Eva Preview](preview.png)
+
 Fake camera events on any Axis device -- no real analytics needed.
 
 Eva is an ACAP that lets you define custom events, register them on the camera platform, and fire them on a schedule or with a single click. Use it to test action rules, VMS integrations, or anything else that reacts to camera events.
