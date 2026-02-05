@@ -1,0 +1,17 @@
+{
+    "acapPackageConf": {
+        "setup": {
+            "appName": "eva",
+            "embeddedSdkVersion": "3.0",
+            "friendlyName": "Event Faker",
+            "runMode": "never",
+            "user": {
+                "group": "sdk",
+                "username": "sdk"
+            },
+            "vendor": "Christoph Acs",
+            "version": "1.0.0"
+        }
+    },
+    "schemaVersion": "1.6.0"
+}
