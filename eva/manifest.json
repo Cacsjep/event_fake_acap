@@ -3,14 +3,14 @@
         "setup": {
             "appName": "eva",
             "embeddedSdkVersion": "3.0",
-            "friendlyName": "Event Faker - Eva",
+            "friendlyName": "Eva - Event Virtualizer",
             "runMode": "respawn",
             "user": {
                 "group": "sdk",
                 "username": "sdk"
             },
             "vendor": "Christoph Acs",
-            "version": "0.0.2"
+            "version": "0.0.3"
         },
         "configuration": {
             "settingPage": "redirect.html"

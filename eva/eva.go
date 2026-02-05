@@ -53,7 +53,7 @@ func (eva *EvaApplication) InitDB() error {
 }
 
 func (eva *EvaApplication) Start() {
-	eva.acapp.Syslog.Info("Starting Eva Application on :8746")
+	eva.acapp.Syslog.Info("Starting Eva - Event Virtualizer for ACAP on :8746")
 
 	if err := eva.InitDB(); err != nil {
 		eva.acapp.Syslog.Critf("Database error: %v", err)
@@ -72,7 +72,7 @@ func (eva *EvaApplication) Start() {
 			eva.acapp.Syslog.Critf("Failed to unregister events on shutdown: %v", err)
 		}
 		eva.webserver.Shutdown()
-		eva.acapp.Syslog.Info("Shutting down Eva Application")
+		eva.acapp.Syslog.Info("Shutting down Eva - Event Virtualizer for ACAP")
 	})
 
 	eva.webserver.Use(cors.New(cors.Config{

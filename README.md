@@ -1,17 +1,25 @@
-# Eva - Event Faker for ACAP
+# Eva - Event Virtualizer for ACAP
 
-Eva lets you create fake events on an Axis camera. You define events (with whatever data fields you want), and Eva declares them on the platform and fires them on a schedule or manually. Handy for testing action rules, VMS integrations, or anything that reacts to camera events without needing the real analytics to be running.
+Fake camera events on any Axis device -- no real analytics needed.
 
-It ships as an ACAP, runs a small web UI on port **8746**, and stores everything in a local SQLite database that survives restarts.
+Eva is an ACAP that lets you define custom events, register them on the camera platform, and fire them on a schedule or with a single click. Use it to test action rules, VMS integrations, or anything else that reacts to camera events.
+
+- **Web UI** on port `8746` to manage everything
+- **SQLite** database that survives restarts
+- **10 demo events** included out of the box (Axis Object Analytics style)
 
 ## How it works
 
-1. **On startup** Eva loads all saved events from the database and registers them with the Axis event system right away. Other applications and the camera's own rule engine can see them immediately.
-2. **CRUD through the API or UI** - when you create, update, or delete an event, it's registered/re-registered/unregistered on the platform in real time. No restart needed.
-3. **Simulation** - hit Start and every event that has an interval configured will fire repeatedly on that cadence. Stop ends the tickers but keeps the events registered.
-4. **Manual trigger** - fire any single event on demand via the UI or API, regardless of whether the simulation is running.
+| What | When |
+|---|---|
+| All saved events are loaded from the DB and registered on the platform | App startup |
+| New/updated/deleted events are registered/re-registered/unregistered live | Create, update, delete via API or UI |
+| Every event with an interval fires repeatedly on that cadence | Simulation start |
+| Any single event can be fired on demand | Manual trigger |
+| CRUD is blocked to protect running emitters | While simulation is active |
 
-Events can be **stateful** (have an active/inactive state the platform tracks) or **stateless** (fire-and-forget). Each event carries data fields you define - strings, ints, floats, bools - with optional randomization so the values look realistic.
+Events are either **stateful** (the platform tracks active/inactive) or **stateless** (fire-and-forget).
+Each event carries data fields you define (string, int, float, bool) with optional randomization.
 
 ## Demo events
 

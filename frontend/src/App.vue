@@ -170,7 +170,7 @@ onMounted(fetchAll)
 <template>
   <v-app>
     <v-app-bar density="compact" color="surface">
-      <v-app-bar-title class="text-primary font-weight-bold">EVA - Event Simulator</v-app-bar-title>
+      <v-app-bar-title class="text-primary font-weight-bold">EVA - Event Virtualizer for ACAP</v-app-bar-title>
       <template #append>
         <v-chip :color="simStatus.running ? 'success' : 'grey'" class="mr-2" variant="elevated">
           {{ simStatus.running ? `Running (${simStatus.event_count})` : 'Stopped' }}
