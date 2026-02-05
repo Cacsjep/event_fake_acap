@@ -78,7 +78,7 @@ type EvaEvent struct {
 func (e *EvaEvent) SetupPlatformEvent(eva *EvaApplication) {
 	eavt := &acapapp.CameraPlatformEvent{
 		Name:      sanitizeEventName(e.Name),
-		NiceName:  utils.StrPtr(fmt.Sprintf("Eva - %s", e.Name)),
+		NiceName:  utils.StrPtr(e.Name),
 		Entries:   []*acapapp.EventEntry{},
 		Stateless: *e.Stateless,
 	}

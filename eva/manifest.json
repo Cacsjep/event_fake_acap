@@ -10,7 +10,7 @@
                 "username": "sdk"
             },
             "vendor": "Christoph Acs",
-            "version": "0.0.3"
+            "version": "0.0.4"
         },
         "configuration": {
             "settingPage": "redirect.html"
