@@ -9,15 +9,16 @@ Eva is an ACAP that lets you define custom events, register them and fire them o
 - **10 demo events** included out of the box (Axis Object Analytics style)
 
 > [!CAUTION]
-> The web server has no authentication. Anyone with network access to port 8746 can create, modify, delete, and trigger events. Only run Eva on trusted networks or behind a firewall.
+> The web server has no authentication. Anyone with network access to port 8746 can create, modify, delete, and trigger events. Only run Eva on trusted networks.
 
 ## How it works
 
-When Eva starts, it loads all saved events from the database and registers them in the camera. From there you can manage events through the web UI or REST API -- creating, updating, or deleting events will register or re-register them on the platform in real time.
+When Eva starts, it loads all saved events from the database and registers them in the camera. From there you can manage events through the web UI or REST API -- creating, updating, or deleting events will register or re-register them.
 
 Hit **Start Simulation** and every event that has an interval will start firing automatically. Intervals can be fixed (e.g. every 5 seconds) or random (a new delay between min and max is picked after each fire). You can also trigger any event manually with a single click, whether the simulation is running or not.
 
-While the simulation is active, create/update/delete operations are blocked to keep things consistent.
+> [!NOTE]
+> While the simulation is active, create/update/delete operations are blocked to keep things consistent.
 
 Events are either **stateful** (the platform tracks active/inactive) or **stateless** (fire-and-forget). Each event carries data fields you define (string, int, float, bool) with optional randomization per field.
 
