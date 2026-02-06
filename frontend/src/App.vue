@@ -29,7 +29,14 @@ function toastError(err: unknown) {
 const formValid = computed(() => {
   if (!editingEvent.value) return false
   if (!editingEvent.value.name?.trim()) return false
-  if (editingEvent.value.use_interval && (!editingEvent.value.interval_seconds || editingEvent.value.interval_seconds < 1)) return false
+  if (editingEvent.value.use_interval) {
+    if (editingEvent.value.use_random_interval) {
+      if (!editingEvent.value.interval_min_seconds || editingEvent.value.interval_min_seconds < 1) return false
+      if (!editingEvent.value.interval_max_seconds || editingEvent.value.interval_max_seconds <= editingEvent.value.interval_min_seconds) return false
+    } else {
+      if (!editingEvent.value.interval_seconds || editingEvent.value.interval_seconds < 1) return false
+    }
+  }
   if (editingEvent.value.DataFields) {
     for (const f of editingEvent.value.DataFields) {
       if (!f.name?.trim()) return false
@@ -43,6 +50,10 @@ const formValid = computed(() => {
 
 const nameRules = [(v: string) => !!v?.trim() || 'Name is required']
 const intervalRules = [
+  (v: number) => (v !== undefined && v !== null) || 'Required',
+  (v: number) => v >= 1 || 'Must be at least 1 second',
+]
+const intervalMinRules = [
   (v: number) => (v !== undefined && v !== null) || 'Required',
   (v: number) => v >= 1 || 'Must be at least 1 second',
 ]
@@ -64,6 +75,9 @@ const defaultEvent = (): Partial<EvaEvent> => ({
   name: '',
   use_interval: true,
   interval_seconds: 5,
+  use_random_interval: false,
+  interval_min_seconds: 1,
+  interval_max_seconds: 10,
   stateless: true,
   DataFields: [],
 })
@@ -172,12 +186,12 @@ onMounted(fetchAll)
     <v-app-bar density="compact" color="surface">
       <v-app-bar-title class="text-primary font-weight-bold">EVA - Event Virtualizer for ACAP</v-app-bar-title>
       <template #append>
-        <v-chip :color="simStatus.running ? 'success' : 'grey'" class="mr-2" variant="elevated">
+        <v-chip size="small" label :color="simStatus.running ? 'success' : 'grey'" class="mr-2" variant="elevated">
           {{ simStatus.running ? `Running (${simStatus.event_count})` : 'Stopped' }}
         </v-chip>
         <v-btn
           :color="simStatus.running ? 'error' : 'success'"
-          variant="elevated"
+          variant="outlined"
           size="small"
           @click="toggleSimulation"
         >
@@ -191,7 +205,7 @@ onMounted(fetchAll)
         <v-row>
           <v-col cols="12" class="d-flex align-center justify-space-between">
             <h2>Events</h2>
-            <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreate">New Event</v-btn>
+            <v-btn color="primary" size="small" prepend-icon="mdi-plus" @click="openCreate">New</v-btn>
           </v-col>
         </v-row>
 
@@ -207,173 +221,171 @@ onMounted(fetchAll)
           </v-col>
         </v-row>
 
-        <v-row v-else>
-          <v-col v-for="ev in events" :key="ev.ID" cols="12" md="6" lg="4">
-            <v-card>
-              <v-card-title>{{ ev.name }}</v-card-title>
-              <v-card-subtitle>
-                <v-chip size="x-small" class="mr-1" color="primary" variant="outlined">{{ ev.stateless ? 'Stateless' : 'Stateful' }}</v-chip>
-                <v-chip v-if="ev.use_interval" size="x-small" color="secondary" variant="outlined">
-                  Every {{ ev.interval_seconds }}s
-                </v-chip>
-              </v-card-subtitle>
-              <v-card-text v-if="ev.DataFields && ev.DataFields.length > 0">
-                <v-table density="compact" class="bg-transparent">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>Random</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(f, i) in ev.DataFields" :key="i">
-                      <td>{{ f.name }}</td>
-                      <td>{{ f.value_type }}</td>
-                      <td>
-                        <v-icon :color="f.use_random ? 'success' : 'grey'" size="small">
-                          {{ f.use_random ? 'mdi-check' : 'mdi-close' }}
-                        </v-icon>
-                      </td>
-                    </tr>
-                  </tbody>
-                </v-table>
-              </v-card-text>
-              <v-card-actions>
-                <v-btn size="small" color="primary" variant="text" @click="triggerEvent(ev.ID)">
-                  <v-icon start>mdi-flash</v-icon>Trigger
-                </v-btn>
-                <v-spacer />
-                <v-btn size="small" icon="mdi-pencil" variant="text" @click="openEdit(ev)" />
-                <v-btn size="small" icon="mdi-delete" variant="text" color="error" @click="deleteEvent(ev.ID)" />
-              </v-card-actions>
-            </v-card>
-          </v-col>
-        </v-row>
+        <v-card v-else flat>
+          <v-table density="compact">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Interval</th>
+                <th>Fields</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="ev in events" :key="ev.ID">
+                <td class="font-weight-medium">{{ ev.name }}</td>
+                <td>
+                  <v-chip size="x-small" :color="ev.stateless ? 'primary' : 'warning'" variant="outlined">{{ ev.stateless ? 'Stateless' : 'Stateful' }}</v-chip>
+                </td>
+                <td>
+                  <v-chip v-if="ev.use_interval && ev.use_random_interval" size="x-small" color="secondary" variant="outlined">
+                    {{ ev.interval_min_seconds }}-{{ ev.interval_max_seconds }}s (random)
+                  </v-chip>
+                  <v-chip v-else-if="ev.use_interval" size="x-small" color="secondary" variant="outlined">
+                    {{ ev.interval_seconds }}s
+                  </v-chip>
+                  <span v-else class="text-medium-emphasis">-</span>
+                </td>
+                <td>
+                  <v-chip v-for="(f, i) in (ev.DataFields ?? [])" :key="i" size="x-small" class="mr-1 mb-1" :color="f.use_random ? 'success' : 'default'" variant="tonal">
+                    {{ f.name }} <span class="text-medium-emphasis ml-1">{{ f.value_type }}</span>
+                  </v-chip>
+                </td>
+                <td class="text-right text-no-wrap">
+                  <v-btn size="small" color="primary" variant="text" @click="triggerEvent(ev.ID)">
+                    <v-icon start size="small">mdi-flash</v-icon>Trigger
+                  </v-btn>
+                  <v-btn size="small" icon="mdi-pencil" variant="text" @click="openEdit(ev)" />
+                  <v-btn size="small" icon="mdi-delete" variant="text" color="error" @click="deleteEvent(ev.ID)" />
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-card>
       </v-container>
     </v-main>
 
     <!-- Create / Edit Dialog -->
-    <v-dialog v-model="showDialog" max-width="650" persistent>
-      <v-card v-if="editingEvent">
-        <v-card-title>{{ editingId ? 'Edit' : 'Create' }} Event</v-card-title>
-        <v-card-text>
-          <!-- Event config -->
-          <v-card flat color="rgba(255,255,255,0.03)" class="pa-4 mb-4">
-            <div class="text-caption text-medium-emphasis mb-1">Event Name</div>
-            <v-text-field v-model="editingEvent.name" variant="filled" density="compact" :rules="nameRules" hide-details="auto" placeholder="e.g. Motion Detected" />
-
-            <v-row dense class="mt-3">
-              <v-col cols="6">
-                <v-checkbox v-model="editingEvent.stateless" label="Stateless" density="compact" color="primary" hide-details />
-              </v-col>
-              <v-col cols="6">
-                <v-checkbox v-model="editingEvent.use_interval" label="Send on interval" density="compact" color="primary" hide-details />
-              </v-col>
-            </v-row>
-
+    <v-dialog v-model="showDialog" max-width="1050" persistent>
+      <v-card v-if="editingEvent" color="#121212">
+        <v-card-title class="d-flex align-center pb-0">
+          {{ editingId ? 'Edit' : 'Create' }} Event
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="showDialog = false" />
+        </v-card-title>
+        <v-card-text class="pt-4">
+          <!-- Row 1: Name + Stateless -->
+          <v-row dense>
+            <v-col>
+              <v-text-field v-model="editingEvent.name" variant="solo-filled" density="compact" :rules="nameRules" hide-details="auto" label="Event Name" placeholder="e.g. Motion Detected" />
+            </v-col>
+            <v-col cols="auto" class="d-flex align-center">
+              <v-checkbox v-model="editingEvent.stateless" label="Stateless" density="compact" color="primary" hide-details />
+            </v-col>
+          </v-row>
+          <!-- Row 2: Interval settings - all inline -->
+          <v-row dense class="mt-2 align-center">
+            <v-col cols="auto">
+              <v-checkbox v-model="editingEvent.use_interval" label="Interval" density="compact" color="primary" hide-details />
+            </v-col>
             <template v-if="editingEvent.use_interval">
-              <div class="text-caption text-medium-emphasis mt-3 mb-1">Interval (seconds)</div>
-              <v-text-field v-model.number="editingEvent.interval_seconds" variant="filled" density="compact" type="number" :rules="intervalRules" min="1" hide-details="auto" />
+              <v-col cols="auto">
+                <v-checkbox v-model="editingEvent.use_random_interval" label="Random" density="compact" color="primary" hide-details />
+              </v-col>
+              <template v-if="editingEvent.use_random_interval">
+                <v-col cols="2">
+                  <v-text-field v-model.number="editingEvent.interval_min_seconds" variant="solo-filled" density="compact" type="number" :rules="intervalMinRules" min="1" hide-details="auto">
+                    <template #append-inner><v-chip size="x-small" label>min-sec</v-chip></template>
+                  </v-text-field>
+                </v-col>
+                <v-col cols="2">
+                  <v-text-field v-model.number="editingEvent.interval_max_seconds" variant="solo-filled" density="compact" type="number" min="2" hide-details="auto"
+                    :rules="[() => (editingEvent?.interval_max_seconds ?? 0) > (editingEvent?.interval_min_seconds ?? 0) || 'Max > Min']"
+                  >
+                    <template #append-inner><v-chip size="x-small" label>max-sec</v-chip></template>
+                  </v-text-field>
+                </v-col>
+              </template>
+              <v-col v-else cols="2">
+                <v-text-field v-model.number="editingEvent.interval_seconds" variant="solo-filled" density="compact" type="number" :rules="intervalRules" min="1" hide-details="auto">
+                  <template #append-inner><v-chip size="x-small" label>sec</v-chip></template>
+                </v-text-field>
+              </v-col>
             </template>
-          </v-card>
+          </v-row>
+          <div class="text-caption text-medium-emphasis mt-1">Automatically send the event at a fixed or random interval. Random picks a new delay each time between min and max.</div>
 
-          <!-- Data fields -->
+          <v-divider class="my-3" />
+
+          <!-- Data fields header -->
           <div class="d-flex align-center mb-2">
-            <span class="text-caption text-medium-emphasis">DATA FIELDS</span>
+            <span class="text-body-2 font-weight-medium">Data Fields</span>
             <v-spacer />
             <v-btn size="x-small" color="primary" variant="tonal" @click="addField" prepend-icon="mdi-plus">Add</v-btn>
           </div>
+          <div class="text-caption text-medium-emphasis mb-2">Key-value pairs sent with each event. Enable Rng to randomize a field's value on each send.</div>
 
-          <v-card
-            v-for="(field, idx) in editingEvent.DataFields"
-            :key="idx"
-            flat
-            color="rgba(255,255,255,0.03)"
-            class="pa-4 mb-2"
-          >
-            <div class="d-flex align-center mb-2">
-              <v-chip size="x-small" color="primary" variant="tonal" label>#{{ idx + 1 }}</v-chip>
-              <v-spacer />
-              <v-btn icon="mdi-delete-outline" size="x-small" variant="text" color="error" @click="removeField(idx)" />
-            </div>
-
-            <v-row dense>
-              <v-col cols="6">
-                <div class="text-caption text-medium-emphasis mb-1">Field Name</div>
-                <v-text-field v-model="field.name" variant="filled" density="compact" :rules="fieldNameRules" hide-details="auto" placeholder="e.g. Temperature" />
-              </v-col>
+          <!-- Data field column headers -->
+          <template v-if="editingEvent.DataFields && editingEvent.DataFields.length > 0">
+            <v-row dense class="mb-1">
+              <v-col cols="3"><span class="text-caption text-medium-emphasis">Name</span></v-col>
+              <v-col cols="2"><span class="text-caption text-medium-emphasis">Type</span></v-col>
+              <v-col cols="2"><span class="text-caption text-medium-emphasis">Default</span></v-col>
+              <v-col cols="auto" style="width:40px"><span class="text-caption text-medium-emphasis">Rng</span></v-col>
+              <v-col><span class="text-caption text-medium-emphasis">Range / Values</span></v-col>
+              <v-col cols="auto" style="width:36px"></v-col>
+            </v-row>
+            <v-row v-for="(field, idx) in editingEvent.DataFields" :key="idx" dense class="align-center mb-1">
               <v-col cols="3">
-                <div class="text-caption text-medium-emphasis mb-1">Type</div>
-                <v-select v-model="field.value_type" :items="['string', 'int', 'float', 'bool']" variant="filled" density="compact" hide-details />
+                <v-text-field v-model="field.name" variant="solo-filled" density="compact" :rules="fieldNameRules" hide-details="auto" placeholder="Field name" />
               </v-col>
-              <v-col cols="3">
-                <div class="text-caption text-medium-emphasis mb-1">Default</div>
-                <v-text-field v-model="field.value" variant="filled" density="compact" hide-details />
+              <v-col cols="2">
+                <v-select v-model="field.value_type" :items="['string', 'int', 'float', 'bool']" variant="solo-filled" density="compact" hide-details />
+              </v-col>
+              <v-col cols="2">
+                <v-text-field v-model="field.value" variant="solo-filled" density="compact" hide-details placeholder="-" />
+              </v-col>
+              <v-col cols="auto" style="width:40px" class="d-flex justify-center">
+                <v-checkbox-btn v-model="field.use_random" color="primary" density="compact" />
+              </v-col>
+              <v-col>
+                <template v-if="field.use_random">
+                  <v-row v-if="field.value_type === 'int'" dense class="align-center">
+                    <v-col>
+                      <v-text-field v-model.number="field.int_rand_start" variant="solo-filled" density="compact" type="number" hide-details placeholder="min" />
+                    </v-col>
+                    <v-col>
+                      <v-text-field v-model.number="field.int_rand_end" variant="solo-filled" density="compact" type="number" hide-details="auto" placeholder="max"
+                        :rules="[() => field.int_rand_end > field.int_rand_start || 'Max>Min']"
+                      />
+                    </v-col>
+                  </v-row>
+                  <v-row v-else-if="field.value_type === 'float'" dense class="align-center">
+                    <v-col>
+                      <v-text-field v-model.number="field.float_rand_start" variant="solo-filled" density="compact" type="number" step="0.01" hide-details placeholder="min" />
+                    </v-col>
+                    <v-col>
+                      <v-text-field v-model.number="field.float_rand_end" variant="solo-filled" density="compact" type="number" step="0.01" hide-details="auto" placeholder="max"
+                        :rules="[() => field.float_rand_end > field.float_rand_start || 'Max>Min']"
+                      />
+                    </v-col>
+                  </v-row>
+                  <v-text-field v-else-if="field.value_type === 'string'"
+                    :model-value="getRandomStringsStr(field)"
+                    @update:model-value="setRandomStringsStr(field, $event)"
+                    variant="solo-filled" density="compact" hide-details="auto" placeholder="a, b, c"
+                    :rules="[() => field.random_strings.length > 0 || 'Need values']"
+                  />
+                  <span v-else class="text-caption text-medium-emphasis">50/50</span>
+                </template>
+              </v-col>
+              <v-col cols="auto" style="width:36px">
+                <v-btn icon="mdi-close" size="x-small" variant="text" color="error" @click="removeField(idx)" />
               </v-col>
             </v-row>
-
-            <v-checkbox v-model="field.use_random" label="Use random values" density="compact" color="primary" hide-details class="mt-2" />
-
-            <template v-if="field.use_random">
-              <v-row v-if="field.value_type === 'int' || field.value_type === 'float'" dense class="mt-1">
-                <v-col cols="6">
-                  <div class="text-caption text-medium-emphasis mb-1">Min</div>
-                  <v-text-field
-                    v-if="field.value_type === 'int'"
-                    v-model.number="field.int_rand_start"
-                    variant="filled"
-                    density="compact"
-                    type="number"
-                    hide-details
-                  />
-                  <v-text-field
-                    v-else
-                    v-model.number="field.float_rand_start"
-                    variant="filled"
-                    density="compact"
-                    type="number"
-                    step="0.01"
-                    hide-details
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <div class="text-caption text-medium-emphasis mb-1">Max</div>
-                  <v-text-field
-                    v-if="field.value_type === 'int'"
-                    v-model.number="field.int_rand_end"
-                    variant="filled"
-                    density="compact"
-                    type="number"
-                    hide-details="auto"
-                    :rules="[() => field.int_rand_end > field.int_rand_start || 'Max > Min']"
-                  />
-                  <v-text-field
-                    v-else
-                    v-model.number="field.float_rand_end"
-                    variant="filled"
-                    density="compact"
-                    type="number"
-                    step="0.01"
-                    hide-details="auto"
-                    :rules="[() => field.float_rand_end > field.float_rand_start || 'Max > Min']"
-                  />
-                </v-col>
-              </v-row>
-              <div v-if="field.value_type === 'string'" class="mt-1">
-                <div class="text-caption text-medium-emphasis mb-1">Random Strings (comma separated)</div>
-                <v-text-field
-                  :model-value="getRandomStringsStr(field)"
-                  @update:model-value="setRandomStringsStr(field, $event)"
-                  variant="filled"
-                  density="compact"
-                  hide-details="auto"
-                  placeholder="e.g. car, person, bike"
-                  :rules="[() => field.random_strings.length > 0 || 'At least one string']"
-                />
-              </div>
-            </template>
-          </v-card>
+          </template>
+          <div v-else class="text-caption text-medium-emphasis text-center py-3">No data fields. Click Add to create one.</div>
         </v-card-text>
         <v-card-actions>
           <v-spacer />

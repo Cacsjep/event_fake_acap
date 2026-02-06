@@ -367,8 +367,30 @@ func (eva *EvaApplication) StartEventSimulation() {
 	eva.mu.Lock()
 	defer eva.mu.Unlock()
 	for _, event := range eva.events {
-		if event.UseInterval != nil && *event.UseInterval && event.IntervalSeconds > 0 {
-			eva.wg.Add(1)
+		if event.UseInterval == nil || !*event.UseInterval {
+			continue
+		}
+		useRandom := event.UseRandomInterval != nil && *event.UseRandomInterval && event.IntervalMinSeconds > 0 && event.IntervalMaxSeconds > event.IntervalMinSeconds
+		if !useRandom && event.IntervalSeconds <= 0 {
+			continue
+		}
+		eva.wg.Add(1)
+		if useRandom {
+			go func(ev *EvaEvent) {
+				defer eva.wg.Done()
+				for {
+					delay := RandomIntInRange(ev.IntervalMinSeconds, ev.IntervalMaxSeconds)
+					select {
+					case <-eva.ctx.Done():
+						return
+					case <-time.After(time.Duration(delay) * time.Second):
+						eva.acapp.SendPlatformEvent(ev.EventId, func() (*axevent.AXEvent, error) {
+							return ev.PlatformEvent.NewEvent(ev.BuildKeyValueMap())
+						})
+					}
+				}
+			}(event)
+		} else {
 			go func(ev *EvaEvent) {
 				defer eva.wg.Done()
 				ticker := time.NewTicker(time.Duration(ev.IntervalSeconds) * time.Second)

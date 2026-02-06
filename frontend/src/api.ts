@@ -37,6 +37,9 @@ export interface EvaEvent {
   name: string
   use_interval: boolean
   interval_seconds: number
+  use_random_interval: boolean
+  interval_min_seconds: number
+  interval_max_seconds: number
   stateless: boolean
   DataFields: DataField[]
 }

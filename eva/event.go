@@ -66,13 +66,16 @@ func (d *DataFields) TypedValue() interface{} {
 
 type EvaEvent struct {
 	gorm.Model
-	Name            string                      `json:"name"`
-	UseInterval     *bool                       `json:"use_interval"`
-	IntervalSeconds int                         `json:"interval_seconds"`
-	DataFields      []DataFields                `gorm:"serializer:json"`
-	Stateless       *bool                       `json:"stateless"`
-	PlatformEvent   acapapp.CameraPlatformEvent `gorm:"-" json:"-"` // Filled at runtime after creation
-	EventId         int                         `gorm:"-" json:"-"` // Filled at runtime after creation
+	Name               string                      `json:"name"`
+	UseInterval        *bool                       `json:"use_interval"`
+	IntervalSeconds    int                         `json:"interval_seconds"`
+	UseRandomInterval  *bool                       `json:"use_random_interval"`
+	IntervalMinSeconds int                         `json:"interval_min_seconds"`
+	IntervalMaxSeconds int                         `json:"interval_max_seconds"`
+	DataFields         []DataFields                `gorm:"serializer:json"`
+	Stateless          *bool                       `json:"stateless"`
+	PlatformEvent      acapapp.CameraPlatformEvent `gorm:"-" json:"-"` // Filled at runtime after creation
+	EventId            int                         `gorm:"-" json:"-"` // Filled at runtime after creation
 }
 
 func (e *EvaEvent) SetupPlatformEvent(eva *EvaApplication) {
@@ -170,10 +173,12 @@ func (eva *EvaApplication) SeedDemoEvents() {
 			},
 		},
 		{
-			Name:            "Person Detection",
-			UseInterval:     boolPtr(true),
-			IntervalSeconds: 3,
-			Stateless:       boolPtr(false),
+			Name:               "Person Detection",
+			UseInterval:        boolPtr(true),
+			UseRandomInterval:  boolPtr(true),
+			IntervalMinSeconds: 1,
+			IntervalMaxSeconds: 5,
+			Stateless:          boolPtr(false),
 			DataFields: []DataFields{
 				{Name: "Active", Value: true, ValueType: BoolType, UseRandom: true},
 				{Name: "Confidence", Value: 0.0, ValueType: FloatType, UseRandom: true, FloatRandStart: 0.5, FloatRandEnd: 1.0},
@@ -213,10 +218,12 @@ func (eva *EvaApplication) SeedDemoEvents() {
 			},
 		},
 		{
-			Name:            "Loitering Detection",
-			UseInterval:     boolPtr(true),
-			IntervalSeconds: 10,
-			Stateless:       boolPtr(false),
+			Name:               "Loitering Detection",
+			UseInterval:        boolPtr(true),
+			UseRandomInterval:  boolPtr(true),
+			IntervalMinSeconds: 5,
+			IntervalMaxSeconds: 15,
+			Stateless:          boolPtr(false),
 			DataFields: []DataFields{
 				{Name: "Active", Value: false, ValueType: BoolType, UseRandom: true},
 				{Name: "Duration Seconds", Value: 0, ValueType: IntType, UseRandom: true, IntRandStart: 30, IntRandEnd: 600},

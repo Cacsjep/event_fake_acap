@@ -2,9 +2,9 @@
 
 ![Eva Preview](preview.png)
 
-Fake camera events on any Axis device -- no real analytics needed.
+Fake camera events on any Axis device.
 
-Eva is an ACAP that lets you define custom events, register them on the camera platform, and fire them on a schedule or with a single click. Use it to test action rules, VMS integrations, or anything else that reacts to camera events.
+Eva is an ACAP that lets you define custom events, register them and fire them on a schedule or with a single click. Use it to test action rules, VMS integrations, or anything else that reacts to camera events.
 
 - **Web UI** on port `8746` to manage everything
 - **SQLite** database that survives restarts
@@ -16,12 +16,13 @@ Eva is an ACAP that lets you define custom events, register them on the camera p
 |---|---|
 | All saved events are loaded from the DB and registered on the platform | App startup |
 | New/updated/deleted events are registered/re-registered/unregistered live | Create, update, delete via API or UI |
-| Every event with an interval fires repeatedly on that cadence | Simulation start |
+| Every event with an interval fires repeatedly on that cadence (fixed or random) | Simulation start |
 | Any single event can be fired on demand | Manual trigger |
 | CRUD is blocked to protect running emitters | While simulation is active |
 
 Events are either **stateful** (the platform tracks active/inactive) or **stateless** (fire-and-forget).
 Each event carries data fields you define (string, int, float, bool) with optional randomization.
+Intervals can be fixed or random -- a random interval picks a new delay between a min and max value each time the event fires.
 
 ## Demo events
 
@@ -31,11 +32,11 @@ On first launch (empty database), Eva seeds 10 events inspired by Axis Object An
 |---|---|---|---|
 | Object Count In Area | stateless | 5s | Object counts with random totals (0-25) and type (Person/Vehicle/Unknown) |
 | Line Crossing Count | stateless | 8s | In/out crossing counters with random counts |
-| Person Detection | stateful | 3s | Active/inactive with confidence score (0.5-1.0) |
+| Person Detection | stateful | 1-5s (random) | Active/inactive with confidence score (0.5-1.0) |
 | Vehicle Detection | stateful | 4s | Active/inactive with vehicle type (Car/Truck/Bus/Motorcycle/Bicycle) |
 | Object Classification | stateless | 5s | Class label (Human/Vehicle/Animal/Unknown) with confidence and object ID |
 | Motion Detection | stateful | 2s | Active/inactive with motion level (0-100) |
-| Loitering Detection | stateful | 10s | Active/inactive with duration (30-600s) and object type |
+| Loitering Detection | stateful | 5-15s (random) | Active/inactive with duration (30-600s) and object type |
 | Area Occupancy | stateless | 5s | Occupancy count and percentage across zones |
 | Speed Estimation | stateless | 3s | Speed in km/h (5-120) for Person/Vehicle/Bicycle |
 | Crossline Detection | stateful | 6s | Active/inactive with direction (Left to Right / Right to Left) |
@@ -57,17 +58,17 @@ event_fake_acap/
     html/                 # Built frontend (served by the ACAP)
   frontend/               # Web UI (Vue 3 + Vuetify)
     src/
-      App.vue             # Main UI - event cards, create/edit dialog, sim controls
+      App.vue             # Main UI - event table, create/edit dialog, sim controls
       api.ts              # Typed HTTP client for the backend API
       main.ts             # Vue app bootstrap
       plugins/            # Vuetify plugin setup
 ```
 
-## Tech stack
+## Tech
 
 **Backend:** Go 1.25, [goxis](https://github.com/Cacsjep/goxis) (ACAP SDK bindings), [Fiber v3](https://gofiber.io/) (HTTP), [GORM](https://gorm.io/) + SQLite (persistence)
 
-**Frontend:** Vue 3 (Composition API, `<script setup>`), Vuetify 3, Vite 7, TypeScript
+**Frontend:** Vue 3, Vuetify 3, Vite 7, TypeScript
 
 ## REST API
 
@@ -101,6 +102,9 @@ Create/update/delete return **409** if the simulation is running.
   "name": "Person Detection",
   "use_interval": true,
   "interval_seconds": 3,
+  "use_random_interval": false,
+  "interval_min_seconds": 0,
+  "interval_max_seconds": 0,
   "stateless": false,
   "DataFields": [
     {
@@ -131,7 +135,9 @@ Create/update/delete return **409** if the simulation is running.
 
 **Supported `value_type`s:** `string`, `int`, `float`, `bool`
 
-When `use_random` is `true`:
+When `use_random_interval` is `true`, `interval_seconds` is ignored and the event fires at a random delay between `interval_min_seconds` and `interval_max_seconds` (a new delay is picked after each fire).
+
+When `use_random` is `true` on a data field:
 - **int** - random value between `int_rand_start` and `int_rand_end`
 - **float** - random value between `float_rand_start` and `float_rand_end`
 - **string** - random pick from `random_strings` array
@@ -208,6 +214,30 @@ Eva - Motion Detection
 ```
 
 You can use them in the camera's action rule engine, subscribe to them via ONVIF, or consume them from a VMS - just like real analytics events.
+
+## Changelog
+
+### 0.0.5
+- Added random interval support (`use_random_interval`, `interval_min_seconds`, `interval_max_seconds`) -- events can now fire at a random delay between min and max instead of a fixed cadence
+- Reworked UI from card grid to compact table layout for the event list
+- Redesigned create/edit dialog with inline row-based form for data fields
+- Updated demo events: Person Detection (1-5s random) and Loitering Detection (5-15s random) now showcase random intervals
+
+### 0.0.4
+- Updated NiceName formatting in SetupPlatformEvent method
+
+### 0.0.3
+- Refactored code structure for improved readability and maintainability
+- Renamed application to "Eva - Event Virtualizer for ACAP"
+
+### 0.0.2
+- Updated build command and manifest version
+
+### 0.0.1
+- Initial release with Vue 3 + Vuetify frontend
+- 10 demo events seeded on first launch
+- Fixed and manual event triggering
+- REST API for full CRUD + simulation control
 
 ## License
 
