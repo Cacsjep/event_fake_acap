@@ -1,7 +1,5 @@
 # Eva - Event Virtualizer for ACAP
 
-![Eva Preview](preview.png)
-
 Fake camera events on any Axis device.
 
 Eva is an ACAP that lets you define custom events, register them and fire them on a schedule or with a single click. Use it to test action rules, VMS integrations, or anything else that reacts to camera events.
@@ -10,21 +8,22 @@ Eva is an ACAP that lets you define custom events, register them and fire them o
 - **SQLite** database that survives restarts
 - **10 demo events** included out of the box (Axis Object Analytics style)
 
+> [!CAUTION]
+> The web server has no authentication. Anyone with network access to port 8746 can create, modify, delete, and trigger events. Only run Eva on trusted networks or behind a firewall.
+
 ## How it works
 
-| What | When |
-|---|---|
-| All saved events are loaded from the DB and registered on the platform | App startup |
-| New/updated/deleted events are registered/re-registered/unregistered live | Create, update, delete via API or UI |
-| Every event with an interval fires repeatedly on that cadence (fixed or random) | Simulation start |
-| Any single event can be fired on demand | Manual trigger |
-| CRUD is blocked to protect running emitters | While simulation is active |
+When Eva starts, it loads all saved events from the database and registers them in the camera. From there you can manage events through the web UI or REST API -- creating, updating, or deleting events will register or re-register them on the platform in real time.
 
-Events are either **stateful** (the platform tracks active/inactive) or **stateless** (fire-and-forget).
-Each event carries data fields you define (string, int, float, bool) with optional randomization.
-Intervals can be fixed or random -- a random interval picks a new delay between a min and max value each time the event fires.
+Hit **Start Simulation** and every event that has an interval will start firing automatically. Intervals can be fixed (e.g. every 5 seconds) or random (a new delay between min and max is picked after each fire). You can also trigger any event manually with a single click, whether the simulation is running or not.
+
+While the simulation is active, create/update/delete operations are blocked to keep things consistent.
+
+Events are either **stateful** (the platform tracks active/inactive) or **stateless** (fire-and-forget). Each event carries data fields you define (string, int, float, bool) with optional randomization per field.
 
 ## Demo events
+
+![Eva Preview](preview.png)
 
 On first launch (empty database), Eva seeds 10 events inspired by Axis Object Analytics:
 
